@@ -1,20 +1,17 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace System.Numerics.Tests
 {
     public static class Util
     {
-        static Random random = new Random();
+        private static Random s_random = new Random();
         public static void SetRandomSeed(int seed)
         {
-            random = new Random(seed);
+            s_random = new Random(seed);
         }
 
         /// <summary>
@@ -27,7 +24,7 @@ namespace System.Numerics.Tests
             float[] values = new float[numValues];
             for (int g = 0; g < numValues; g++)
             {
-                values[g] = (float)(random.NextDouble() * 99 + 1);
+                values[g] = (float)(s_random.NextDouble() * 99 + 1);
             }
             return values;
         }
@@ -42,7 +39,7 @@ namespace System.Numerics.Tests
             int[] values = new int[numValues];
             for (int g = 0; g < numValues; g++)
             {
-                values[g] = random.Next(1, 100);
+                values[g] = s_random.Next(1, 100);
             }
             return values;
         }
@@ -57,7 +54,7 @@ namespace System.Numerics.Tests
             double[] values = new double[numValues];
             for (int g = 0; g < numValues; g++)
             {
-                values[g] = random.NextDouble() * 99 + 1;
+                values[g] = s_random.NextDouble() * 99 + 1;
             }
             return values;
         }
@@ -72,7 +69,7 @@ namespace System.Numerics.Tests
             long[] values = new long[numValues];
             for (int g = 0; g < numValues; g++)
             {
-                values[g] = random.Next(1, 100) * (long.MaxValue / int.MaxValue);
+                values[g] = s_random.Next(1, 100) * (long.MaxValue / int.MaxValue);
             }
             return values;
         }
@@ -90,14 +87,14 @@ namespace System.Numerics.Tests
 
         public static T GenerateSingleValue<T>(int min = 1, int max = 100) where T : struct
         {
-            var randomRange = random.Next(min, max);
-            T value = (T)(dynamic)randomRange;
+            var randomRange = s_random.Next(min, max);
+            T value = unchecked((T)(dynamic)randomRange);
             return value;
         }
 
         public static T Abs<T>(T value) where T : struct
         {
-            Type[] unsignedTypes = new[] { typeof(Byte), typeof(UInt16), typeof(UInt32), typeof(UInt64) };
+            Type[] unsignedTypes = new[] { typeof(byte), typeof(ushort), typeof(uint), typeof(ulong) };
             if (unsignedTypes.Contains(typeof(T)))
             {
                 return value;
@@ -111,12 +108,12 @@ namespace System.Numerics.Tests
 
         public static T Sqrt<T>(T value) where T : struct
         {
-            return (T)(dynamic)(Math.Sqrt((dynamic)value));
+            return unchecked((T)(dynamic)(Math.Sqrt((dynamic)value)));
         }
 
         public static T Multiply<T>(T left, T right) where T : struct
         {
-            return (T)((dynamic)left * right);
+            return unchecked((T)((dynamic)left * right));
         }
 
         public static T Divide<T>(T left, T right) where T : struct
@@ -126,12 +123,12 @@ namespace System.Numerics.Tests
 
         public static T Add<T>(T left, T right) where T : struct
         {
-            return (T)((dynamic)left + right);
+            return unchecked((T)((dynamic)left + right));
         }
 
         public static T Subtract<T>(T left, T right) where T : struct
         {
-            return (T)((dynamic)left - right);
+            return unchecked((T)((dynamic)left - right));
         }
 
         public static T Xor<T>(T left, T right) where T : struct
@@ -146,7 +143,7 @@ namespace System.Numerics.Tests
 
         public static T OnesComplement<T>(T left) where T : struct
         {
-            return (T)(~(dynamic)left);
+            return unchecked((T)(~(dynamic)left));
         }
         public static float Clamp(float value, float min, float max)
         {

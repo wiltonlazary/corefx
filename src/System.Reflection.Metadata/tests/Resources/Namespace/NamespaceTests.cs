@@ -1,4 +1,8 @@
-﻿/* This file contains multiple namespace/class definitions used to test the namespace walking
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+/* This file contains multiple namespace/class definitions used to test the namespace walking
  * capabilities of the namespace reader.
  * 
  * Note that type definitions inside of the namespaces (with the exception of the global namespace)
@@ -10,7 +14,6 @@
  * There are no type forwarders in any of these namespaces except the Forwarder namespace.
  */
 
-using System;
 using System.Runtime.CompilerServices;
 
 [assembly: TypeForwardedTo(typeof(Forwarder.FwdType))]
@@ -126,6 +129,28 @@ namespace SkipFirstOnce.Namespace
     { }
 
     public class Namespace
+    { }
+}
+
+// Same suffix shared by different namespaces
+namespace FxResources.Microsoft.CSharp
+{
+    public class FxResources
+    { }
+
+    public class Microsoft
+    { }
+
+    public class CSharp
+    { }
+}
+
+namespace Microsoft.CSharp
+{
+    public class Microsoft
+    { }
+
+    public class CSharp
     { }
 }
 

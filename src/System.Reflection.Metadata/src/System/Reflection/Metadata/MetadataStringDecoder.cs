@@ -1,14 +1,15 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Text;
-using System.Reflection.Internal;
 using System.Diagnostics;
+using System.Reflection.Internal;
+using System.Text;
 
 namespace System.Reflection.Metadata
 {
     /// <summary>
-    /// Provides the <see cref="MetadataReader"/> with a custom mechansim for decoding
+    /// Provides the <see cref="MetadataReader"/> with a custom mechanism for decoding
     /// byte sequences in metadata that represent text.
     /// </summary>
     /// <remarks>
@@ -23,17 +24,16 @@ namespace System.Reflection.Metadata
     /// </remarks>
     public class MetadataStringDecoder
     {
-        private static readonly MetadataStringDecoder defaultUTF8 = new MetadataStringDecoder(Encoding.UTF8);
-        private readonly Encoding encoding;
+        /// <summary>
+        /// Gets the encoding used by this instance. 
+        /// </summary>
+        public Encoding Encoding { get; }
 
         /// <summary>
         /// The default decoder used by <see cref="MetadataReader"/> to decode UTF-8 when
         /// no decoder is provided to the constructor.
         /// </summary>
-        public static MetadataStringDecoder DefaultUTF8
-        {
-            get { return defaultUTF8; }
-        }
+        public static MetadataStringDecoder DefaultUTF8 { get; } = new MetadataStringDecoder(Encoding.UTF8);
 
         /// <summary>
         /// Creates a <see cref="MetadataStringDecoder"/> for the given encoding.
@@ -46,28 +46,20 @@ namespace System.Reflection.Metadata
         {
             if (encoding == null)
             {
-                throw new ArgumentNullException("encoding");
+                throw new ArgumentNullException(nameof(encoding));
             }
 
             // Non-enforcement of (encoding is UTF8Encoding) here is by design.
             //
             // This type is not itself aware of any particular encoding. However, the constructor argument that accepts a 
-            // MetadataStringDecoderargument is validated however because it must be a UTF8 decoder.
+            // MetadataStringDecoder argument is validated however because it must be a UTF8 decoder.
             //
             // Above architectural purity, the fact that you can get our default implementation of Encoding.GetString
-            // is a hidden feature to use our light-up of unsafe Encoding.GetSring outside this assembly on an arbitrary 
+            // is a hidden feature to use our light-up of unsafe Encoding.GetString outside this assembly on an arbitrary 
             // encoding. I'm more comfortable sharing that hack than having the reflection over internal 
             // CreateStringFromEncoding spread.
 
-            this.encoding = encoding;
-        }
-
-        /// <summary>
-        /// Gets the encoding used by this instance. 
-        /// </summary>
-        public Encoding Encoding
-        {
-            get { return this.encoding; }
+            Encoding = encoding;
         }
 
         /// <summary>
@@ -79,13 +71,13 @@ namespace System.Reflection.Metadata
         /// <param name="bytes">Pointer to bytes to decode.</param>
         /// <param name="byteCount">Number of bytes to decode.</param>
         /// <returns>The decoded string.</returns>
-        public unsafe virtual String GetString(byte* bytes, int byteCount)
+        public unsafe virtual string GetString(byte* bytes, int byteCount)
         {
-            Debug.Assert(this.encoding != null);
+            Debug.Assert(Encoding != null);
 
             // Note that this call is currently wired to the light-up extension in EncodingHelper
             // for portability.
-            return this.encoding.GetString(bytes, byteCount);
+            return Encoding.GetString(bytes, byteCount);
         }
     }
 }

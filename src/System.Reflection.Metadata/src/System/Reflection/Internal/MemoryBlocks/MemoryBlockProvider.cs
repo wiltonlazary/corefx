@@ -1,8 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection.PortableExecutable;
 
@@ -27,16 +26,17 @@ namespace System.Reflection.Internal
         /// <exception cref="IOException">Error while reading from the memory source.</exception>
         public AbstractMemoryBlock GetMemoryBlock(int start, int size)
         {
-            // Add canot overflow as it is the sum of two 32-bit values done in 64 bits.
+            // Add cannot overflow as it is the sum of two 32-bit values done in 64 bits.
             // Negative start or size is handle by overflow to greater than maximum size = int.MaxValue. 
             if ((ulong)(unchecked((uint)start)) + unchecked((uint)size) > (ulong)this.Size)
             {
-                PEBinaryReader.ThrowImageTooSmallOrContainsInvalidOffsetOrCount();
+                Throw.ImageTooSmallOrContainsInvalidOffsetOrCount();
             }
 
             return GetMemoryBlockImpl(start, size);
         }
 
+        /// <exception cref="IOException">IO error while reading from the underlying stream.</exception>
         protected abstract AbstractMemoryBlock GetMemoryBlockImpl(int start, int size);
 
         /// <summary>

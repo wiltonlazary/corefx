@@ -1,19 +1,20 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Reflection
 {
     [Flags]
-    internal enum MethodSemanticsAttributes
+    public enum MethodSemanticsAttributes
     {
         /// <summary>
-        /// Used to read the value of the property.
+        /// Used to modify the value of the property.
         /// CLS-compliant setters are named with set_ prefix.
         /// </summary>
         Setter = 0x0001,
 
         /// <summary>
-        /// Used to modify the value of the property.
+        /// Used to read the value of the property.
         /// CLS-compliant getters are named with get_ prefix.
         /// </summary>
         Getter = 0x0002,
@@ -32,7 +33,7 @@ namespace System.Reflection
 
         /// <summary>
         /// Used to remove a handler for an event.
-        /// Correpsonds to th RemoveOn flag in the Ecma 335 CLI specification.
+        /// Corresponds to the RemoveOn flag in the Ecma 335 CLI specification.
         /// CLS-compliant removers are named with remove_ prefix.
         /// </summary>
         Remover = 0x0010,
@@ -142,7 +143,7 @@ namespace System.Reflection
         Public = 0x00000001,
 
         /// <summary>
-        /// The Resource is exported from the Assembly
+        /// The Resource is not exported from the Assembly
         /// </summary>
         Private = 0x00000002,
 
@@ -183,7 +184,7 @@ namespace System.Reflection
         Sha384 = 0x800d,
 
         /// <summary>
-        /// Retrieves a version of the Secure Hash Algorithm with a hash size of 384 bits.
+        /// Retrieves a version of the Secure Hash Algorithm with a hash size of 512 bits.
         /// </summary>
         Sha512 = 0x800e
     }

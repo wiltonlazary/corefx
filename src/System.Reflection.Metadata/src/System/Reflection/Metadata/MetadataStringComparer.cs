@@ -1,27 +1,27 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace System.Reflection.Metadata
 {
     /// <summary>
-    /// Provides zero-allocation string comparison helpers to query strings in metadata.
+    /// Provides string comparison helpers to query strings in metadata while
+    /// avoiding allocation where possible.
     /// </summary>
     ///
     /// <remarks>
+    /// No allocation is performed unless both the handle argument and the
+    /// value argument contain non-ascii text.
+    ///
     /// Obtain instances using <see cref="MetadataReader.StringComparer"/>.
     ///
     /// A default-initialized instance is useless and behaves as a null reference.
     ///
     /// The code is optimized such that there is no additional overhead in
-    /// re-obtaining a a comparer over hoisting it in to a local.
+    /// re-obtaining a comparer over hoisting it in to a local.
     /// 
     /// That is to say that a construct like:
     ///
@@ -46,55 +46,79 @@ namespace System.Reflection.Metadata
     ///
     /// The choice between them is therefore one of style and not performance.
     /// </remarks>
-    public struct MetadataStringComparer
+    public readonly struct MetadataStringComparer
     {
-        private readonly MetadataReader reader;
+        private readonly MetadataReader _reader;
 
         internal MetadataStringComparer(MetadataReader reader)
         {
             Debug.Assert(reader != null);
-            this.reader = reader;
+            _reader = reader;
         }
 
         public bool Equals(StringHandle handle, string value)
         {
+            return Equals(handle, value, ignoreCase: false);
+        }
+
+        public bool Equals(StringHandle handle, string value, bool ignoreCase)
+        {
             if (value == null)
             {
-                ThrowValueArgumentNull();
+                Throw.ValueArgumentNull();
             }
 
-            return reader.StringStream.Equals(handle, value, reader.utf8Decoder);
+            return _reader.StringHeap.Equals(handle, value, _reader.UTF8Decoder, ignoreCase);
         }
 
         public bool Equals(NamespaceDefinitionHandle handle, string value)
         {
+            return Equals(handle, value, ignoreCase: false);
+        }
+
+        public bool Equals(NamespaceDefinitionHandle handle, string value, bool ignoreCase)
+        {
             if (value == null)
             {
-                ThrowValueArgumentNull();
+                Throw.ValueArgumentNull();
             }
 
             if (handle.HasFullName)
             {
-                return reader.StringStream.Equals(handle.GetFullName(), value, reader.utf8Decoder);
+                return _reader.StringHeap.Equals(handle.GetFullName(), value, _reader.UTF8Decoder, ignoreCase);
             }
 
-            return value == reader.namespaceCache.GetFullName(handle);
+            return value == _reader.NamespaceCache.GetFullName(handle);
+        }
+
+        public bool Equals(DocumentNameBlobHandle handle, string value)
+        {
+            return Equals(handle, value, ignoreCase: false);
+        }
+
+        public bool Equals(DocumentNameBlobHandle handle, string value, bool ignoreCase)
+        {
+            if (value == null)
+            {
+                Throw.ValueArgumentNull();
+            }
+
+            return _reader.BlobHeap.DocumentNameEquals(handle, value, ignoreCase);
         }
 
         public bool StartsWith(StringHandle handle, string value)
         {
-            if (value == null)
-            {
-                ThrowValueArgumentNull();
-            }
-
-            return reader.StringStream.StartsWith(handle, value, reader.utf8Decoder);
+            return StartsWith(handle, value, ignoreCase: false);
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void ThrowValueArgumentNull()
+        public bool StartsWith(StringHandle handle, string value, bool ignoreCase)
         {
-            throw new ArgumentNullException("value");
+            if (value == null)
+            {
+                Throw.ValueArgumentNull();
+            }
+
+            return _reader.StringHeap.StartsWith(handle, value, _reader.UTF8Decoder, ignoreCase);
         }
     }
 }

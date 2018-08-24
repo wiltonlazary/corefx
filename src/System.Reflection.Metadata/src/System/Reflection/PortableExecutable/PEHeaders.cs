@@ -1,11 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Immutable;
 using System.IO;
+using System.Reflection.Internal;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
-using System.Text;
 
 namespace System.Reflection.PortableExecutable
 {
@@ -14,15 +15,22 @@ namespace System.Reflection.PortableExecutable
     /// </summary>
     public sealed class PEHeaders
     {
-        private readonly CoffHeader coffHeader;
-        private readonly PEHeader peHeader;
-        private readonly ImmutableArray<SectionHeader> sectionHeaders;
-        private readonly CorHeader corHeader;
-        private readonly int metadataStartOffset = -1;
-        private readonly int metadataSize;
-        private readonly int coffHeaderStartOffset = -1;
-        private readonly int corHeaderStartOffset = -1;
-        private readonly int peHeaderStartOffset = -1;
+        private readonly CoffHeader _coffHeader;
+        private readonly PEHeader _peHeader;
+        private readonly ImmutableArray<SectionHeader> _sectionHeaders;
+        private readonly CorHeader _corHeader;
+        private readonly bool _isLoadedImage;
+
+        private readonly int _metadataStartOffset = -1;
+        private readonly int _metadataSize;
+        private readonly int _coffHeaderStartOffset = -1;
+        private readonly int _corHeaderStartOffset = -1;
+        private readonly int _peHeaderStartOffset = -1;
+
+        internal const ushort DosSignature = 0x5A4D;     // 'M' 'Z'
+        internal const int PESignatureOffsetLocation = 0x3C;
+        internal const uint PESignature = 0x00004550;    // PE00
+        internal const int PESignatureSize = sizeof(uint);
 
         /// <summary>
         /// Reads PE headers from the current location in the stream.
@@ -33,7 +41,7 @@ namespace System.Reflection.PortableExecutable
         /// <exception cref="ArgumentException">The stream doesn't support seek operations.</exception>
         /// <exception cref="ArgumentNullException"><paramref name="peStream"/> is null.</exception>
         public PEHeaders(Stream peStream)
-           : this(peStream, null)
+           : this(peStream, 0)
         {
         }
 
@@ -48,51 +56,64 @@ namespace System.Reflection.PortableExecutable
         /// <exception cref="ArgumentNullException"><paramref name="peStream"/> is null.</exception>
         /// <exception cref="ArgumentOutOfRangeException">Size is negative or extends past the end of the stream.</exception>
         public PEHeaders(Stream peStream, int size)
-            : this(peStream, (int?)size)
+            : this(peStream, size, isLoadedImage: false)
         {
         }
 
-        private PEHeaders(Stream peStream, int? sizeOpt)
+        /// <summary>
+        /// Reads PE headers from the current location in the stream.
+        /// </summary>
+        /// <param name="peStream">Stream containing PE image of the given size starting at its current position.</param>
+        /// <param name="size">Size of the PE image.</param>
+        /// <param name="isLoadedImage">True if the PE image has been loaded into memory by the OS loader.</param>
+        /// <exception cref="BadImageFormatException">The data read from stream have invalid format.</exception>
+        /// <exception cref="IOException">Error reading from the stream.</exception>
+        /// <exception cref="ArgumentException">The stream doesn't support seek operations.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="peStream"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Size is negative or extends past the end of the stream.</exception>
+        public PEHeaders(Stream peStream, int size, bool isLoadedImage)
         {
             if (peStream == null)
             {
-                throw new ArgumentNullException("peStream");
+                throw new ArgumentNullException(nameof(peStream));
             }
 
             if (!peStream.CanRead || !peStream.CanSeek)
             {
-                throw new ArgumentException(MetadataResources.StreamMustSupportReadAndSeek, "peStream");
+                throw new ArgumentException(SR.StreamMustSupportReadAndSeek, nameof(peStream));
             }
 
-            int size = PEBinaryReader.GetAndValidateSize(peStream, sizeOpt);
-            var reader = new PEBinaryReader(peStream, size);
+            _isLoadedImage = isLoadedImage;
+
+            int actualSize = StreamExtensions.GetAndValidateSize(peStream, size, nameof(peStream));
+            var reader = new PEBinaryReader(peStream, actualSize);
 
             bool isCoffOnly;
             SkipDosHeader(ref reader, out isCoffOnly);
 
-            this.coffHeaderStartOffset = reader.CurrentOffset;
-            this.coffHeader = new CoffHeader(ref reader);
+            _coffHeaderStartOffset = reader.CurrentOffset;
+            _coffHeader = new CoffHeader(ref reader);
 
             if (!isCoffOnly)
             {
-                this.peHeaderStartOffset = reader.CurrentOffset;
-                this.peHeader = new PEHeader(ref reader);
+                _peHeaderStartOffset = reader.CurrentOffset;
+                _peHeader = new PEHeader(ref reader);
             }
 
-            this.sectionHeaders = this.ReadSectionHeaders(ref reader);
+            _sectionHeaders = this.ReadSectionHeaders(ref reader);
 
             if (!isCoffOnly)
             {
                 int offset;
-                if (TryCalculateCorHeaderOffset(size, out offset))
+                if (TryCalculateCorHeaderOffset(actualSize, out offset))
                 {
-                    this.corHeaderStartOffset = offset;
+                    _corHeaderStartOffset = offset;
                     reader.Seek(offset);
-                    this.corHeader = new CorHeader(ref reader);
+                    _corHeader = new CorHeader(ref reader);
                 }
             }
 
-            CalculateMetadataLocation(size, out this.metadataStartOffset, out this.metadataSize);
+            CalculateMetadataLocation(actualSize, out _metadataStartOffset, out _metadataSize);
         }
 
         /// <summary>
@@ -101,7 +122,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public int MetadataStartOffset
         {
-            get { return metadataStartOffset; }
+            get { return _metadataStartOffset; }
         }
 
         /// <summary>
@@ -109,7 +130,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public int MetadataSize
         {
-            get { return metadataSize; }
+            get { return _metadataSize; }
         }
 
         /// <summary>
@@ -117,7 +138,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public CoffHeader CoffHeader
         {
-            get { return coffHeader; }
+            get { return _coffHeader; }
         }
 
         /// <summary>
@@ -125,7 +146,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public int CoffHeaderStartOffset
         {
-            get { return coffHeaderStartOffset; }
+            get { return _coffHeaderStartOffset; }
         }
 
         /// <summary>
@@ -133,7 +154,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public bool IsCoffOnly
         {
-            get { return this.peHeader == null; }
+            get { return _peHeader == null; }
         }
 
         /// <summary>
@@ -141,7 +162,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public PEHeader PEHeader
         {
-            get { return peHeader; }
+            get { return _peHeader; }
         }
 
         /// <summary>
@@ -149,7 +170,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public int PEHeaderStartOffset
         {
-            get { return peHeaderStartOffset; }
+            get { return _peHeaderStartOffset; }
         }
 
         /// <summary>
@@ -157,7 +178,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public ImmutableArray<SectionHeader> SectionHeaders
         {
-            get { return sectionHeaders; }
+            get { return _sectionHeaders; }
         }
 
         /// <summary>
@@ -165,7 +186,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public CorHeader CorHeader
         {
-            get { return corHeader; }
+            get { return _corHeader; }
         }
 
         /// <summary>
@@ -173,7 +194,7 @@ namespace System.Reflection.PortableExecutable
         /// </summary>
         public int CorHeaderStartOffset
         {
-            get { return corHeaderStartOffset; }
+            get { return _corHeaderStartOffset; }
         }
 
         /// <summary>
@@ -183,7 +204,7 @@ namespace System.Reflection.PortableExecutable
         {
             get
             {
-                return peHeader != null && peHeader.Subsystem == Subsystem.WindowsCui;
+                return _peHeader != null && _peHeader.Subsystem == Subsystem.WindowsCui;
             }
         }
 
@@ -194,7 +215,7 @@ namespace System.Reflection.PortableExecutable
         {
             get
             {
-                return (coffHeader.Characteristics & Characteristics.Dll) != 0;
+                return (_coffHeader.Characteristics & Characteristics.Dll) != 0;
             }
         }
 
@@ -205,22 +226,22 @@ namespace System.Reflection.PortableExecutable
         {
             get
             {
-                return (coffHeader.Characteristics & Characteristics.Dll) == 0;
+                return (_coffHeader.Characteristics & Characteristics.Dll) == 0;
             }
         }
 
         private bool TryCalculateCorHeaderOffset(long peStreamSize, out int startOffset)
         {
-            if (!TryGetDirectoryOffset(peHeader.CorHeaderTableDirectory, out startOffset))
+            if (!TryGetDirectoryOffset(_peHeader.CorHeaderTableDirectory, out startOffset, canCrossSectionBoundary: false))
             {
                 startOffset = -1;
                 return false;
             }
 
-            int length = peHeader.CorHeaderTableDirectory.Size;
+            int length = _peHeader.CorHeaderTableDirectory.Size;
             if (length < COR20Constants.SizeOfCorHeader)
             {
-                throw new BadImageFormatException(MetadataResources.InvalidCorHeaderSize);
+                throw new BadImageFormatException(SR.InvalidCorHeaderSize);
             }
 
             return true;
@@ -231,7 +252,7 @@ namespace System.Reflection.PortableExecutable
             // Look for DOS Signature "MZ"
             ushort dosSig = reader.ReadUInt16();
 
-            if (dosSig != PEFileConstants.DosSignature)
+            if (dosSig != DosSignature)
             {
                 // If image doesn't start with DOS signature, let's assume it is a 
                 // COFF (Common Object File Format), aka .OBJ file. 
@@ -245,7 +266,7 @@ namespace System.Reflection.PortableExecutable
                 else
                 {
                     // Might need to handle other formats. Anonymous or LTCG objects, for example.
-                    throw new BadImageFormatException(MetadataResources.UnknownFileFormat);
+                    throw new BadImageFormatException(SR.UnknownFileFormat);
                 }
             }
             else
@@ -256,26 +277,26 @@ namespace System.Reflection.PortableExecutable
             if (!isCOFFOnly)
             {
                 // Skip the DOS Header
-                reader.Seek(PEFileConstants.PESignatureOffsetLocation);
+                reader.Seek(PESignatureOffsetLocation);
 
                 int ntHeaderOffset = reader.ReadInt32();
                 reader.Seek(ntHeaderOffset);
 
                 // Look for PESignature "PE\0\0"
                 uint ntSignature = reader.ReadUInt32();
-                if (ntSignature != PEFileConstants.PESignature)
+                if (ntSignature != PESignature)
                 {
-                    throw new BadImageFormatException(MetadataResources.InvalidPESignature);
+                    throw new BadImageFormatException(SR.InvalidPESignature);
                 }
             }
         }
 
         private ImmutableArray<SectionHeader> ReadSectionHeaders(ref PEBinaryReader reader)
         {
-            int numberOfSections = this.coffHeader.NumberOfSections;
+            int numberOfSections = _coffHeader.NumberOfSections;
             if (numberOfSections < 0)
             {
-                throw new BadImageFormatException(MetadataResources.InvalidNumberOfSections);
+                throw new BadImageFormatException(SR.InvalidNumberOfSections);
             }
 
             var builder = ImmutableArray.CreateBuilder<SectionHeader>(numberOfSections);
@@ -289,13 +310,17 @@ namespace System.Reflection.PortableExecutable
         }
 
         /// <summary>
-        /// Gets the offset (in bytes) from the start of the image to the given directory entry.
+        /// Gets the offset (in bytes) from the start of the image to the given directory data.
         /// </summary>
-        /// <param name="directory"></param>
-        /// <param name="offset"></param>
-        /// <returns>The section containing the directory could not be found.</returns>
-        /// <exception cref="BadImageFormatException">The section containing the</exception>
+        /// <param name="directory">PE directory entry</param>
+        /// <param name="offset">Offset from the start of the image to the given directory data</param>
+        /// <returns>True if the directory data is found, false otherwise.</returns>
         public bool TryGetDirectoryOffset(DirectoryEntry directory, out int offset)
+        {
+            return TryGetDirectoryOffset(directory, out offset, canCrossSectionBoundary: true);
+        }
+
+        internal bool TryGetDirectoryOffset(DirectoryEntry directory, out int offset, bool canCrossSectionBoundary)
         {
             int sectionIndex = GetContainingSectionIndex(directory.RelativeVirtualAddress);
             if (sectionIndex < 0)
@@ -304,13 +329,13 @@ namespace System.Reflection.PortableExecutable
                 return false;
             }
 
-            int relativeOffset = directory.RelativeVirtualAddress - sectionHeaders[sectionIndex].VirtualAddress;
-            if (directory.Size > sectionHeaders[sectionIndex].VirtualSize - relativeOffset)
+            int relativeOffset = directory.RelativeVirtualAddress - _sectionHeaders[sectionIndex].VirtualAddress;
+            if (!canCrossSectionBoundary && directory.Size > _sectionHeaders[sectionIndex].VirtualSize - relativeOffset)
             {
-                throw new BadImageFormatException(MetadataResources.SectionTooSmall);
+                throw new BadImageFormatException(SR.SectionTooSmall);
             }
 
-            offset = sectionHeaders[sectionIndex].PointerToRawData + relativeOffset;
+            offset = _isLoadedImage ? directory.RelativeVirtualAddress : _sectionHeaders[sectionIndex].PointerToRawData + relativeOffset;
             return true;
         }
 
@@ -324,10 +349,10 @@ namespace System.Reflection.PortableExecutable
         /// </returns>
         public int GetContainingSectionIndex(int relativeVirtualAddress)
         {
-            for (int i = 0; i < sectionHeaders.Length; i++)
+            for (int i = 0; i < _sectionHeaders.Length; i++)
             {
-                if (sectionHeaders[i].VirtualAddress <= relativeVirtualAddress &&
-                    relativeVirtualAddress < sectionHeaders[i].VirtualAddress + sectionHeaders[i].VirtualSize)
+                if (_sectionHeaders[i].VirtualAddress <= relativeVirtualAddress &&
+                    relativeVirtualAddress < _sectionHeaders[i].VirtualAddress + _sectionHeaders[i].VirtualSize)
                 {
                     return i;
                 }
@@ -336,7 +361,7 @@ namespace System.Reflection.PortableExecutable
             return -1;
         }
 
-        private int IndexOfSection(string name)
+        internal int IndexOfSection(string name)
         {
             for (int i = 0; i < SectionHeaders.Length; i++)
             {
@@ -361,10 +386,18 @@ namespace System.Reflection.PortableExecutable
                     return;
                 }
 
-                start = SectionHeaders[cormeta].PointerToRawData;
-                size = SectionHeaders[cormeta].SizeOfRawData;
+                if (_isLoadedImage)
+                {
+                    start = SectionHeaders[cormeta].VirtualAddress;
+                    size = SectionHeaders[cormeta].VirtualSize;
+                }
+                else
+                {
+                    start = SectionHeaders[cormeta].PointerToRawData;
+                    size = SectionHeaders[cormeta].SizeOfRawData;
+                }
             }
-            else if (corHeader == null)
+            else if (_corHeader == null)
             {
                 start = 0;
                 size = 0;
@@ -372,12 +405,12 @@ namespace System.Reflection.PortableExecutable
             }
             else
             {
-                if (!TryGetDirectoryOffset(corHeader.MetadataDirectory, out start))
+                if (!TryGetDirectoryOffset(_corHeader.MetadataDirectory, out start, canCrossSectionBoundary: false))
                 {
-                    throw new BadImageFormatException(MetadataResources.MissingDataDirectory);
+                    throw new BadImageFormatException(SR.MissingDataDirectory);
                 }
 
-                size = corHeader.MetadataDirectory.Size;
+                size = _corHeader.MetadataDirectory.Size;
             }
 
             if (start < 0 ||
@@ -385,7 +418,7 @@ namespace System.Reflection.PortableExecutable
                 size <= 0 ||
                 start > peImageSize - size)
             {
-                throw new BadImageFormatException(MetadataResources.InvalidMetadataSectionSpan);
+                throw new BadImageFormatException(SR.InvalidMetadataSectionSpan);
             }
         }
     }

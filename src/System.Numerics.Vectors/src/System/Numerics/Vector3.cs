@@ -1,7 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
+using System.Numerics.Hashing;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -44,8 +46,8 @@ namespace System.Numerics
         public override int GetHashCode()
         {
             int hash = this.X.GetHashCode();
-            hash = HashCodeHelper.CombineHashCodes(hash, this.Y.GetHashCode());
-            hash = HashCodeHelper.CombineHashCodes(hash, this.Z.GetHashCode());
+            hash = HashHelpers.Combine(hash, this.Y.GetHashCode());
+            hash = HashHelpers.Combine(hash, this.Z.GetHashCode());
             return hash;
         }
 
@@ -91,14 +93,16 @@ namespace System.Numerics
         public string ToString(string format, IFormatProvider formatProvider)
         {
             StringBuilder sb = new StringBuilder();
-            string separator = NumberFormatInfo.GetInstance(formatProvider).NumberGroupSeparator + " ";
-            sb.Append("<");
+            string separator = NumberFormatInfo.GetInstance(formatProvider).NumberGroupSeparator;
+            sb.Append('<');
             sb.Append(((IFormattable)this.X).ToString(format, formatProvider));
             sb.Append(separator);
+            sb.Append(' ');
             sb.Append(((IFormattable)this.Y).ToString(format, formatProvider));
             sb.Append(separator);
+            sb.Append(' ');
             sb.Append(((IFormattable)this.Z).ToString(format, formatProvider));
-            sb.Append(">");
+            sb.Append('>');
             return sb.ToString();
         }
 
@@ -112,12 +116,12 @@ namespace System.Numerics
             if (Vector.IsHardwareAccelerated)
             {
                 float ls = Vector3.Dot(this, this);
-                return (float)System.Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
             else
             {
                 float ls = X * X + Y * Y + Z * Z;
-                return (float)System.Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
         }
 
@@ -153,7 +157,7 @@ namespace System.Numerics
             {
                 Vector3 difference = value1 - value2;
                 float ls = Vector3.Dot(difference, difference);
-                return (float)System.Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
             else
             {
@@ -163,7 +167,7 @@ namespace System.Numerics
 
                 float ls = dx * dx + dy * dy + dz * dz;
 
-                return (float)System.Math.Sqrt((double)ls);
+                return MathF.Sqrt(ls);
             }
         }
 
@@ -207,7 +211,7 @@ namespace System.Numerics
             else
             {
                 float ls = value.X * value.X + value.Y * value.Y + value.Z * value.Z;
-                float length = (float)System.Math.Sqrt(ls);
+                float length = MathF.Sqrt(ls);
                 return new Vector3(value.X / length, value.Y / length, value.Z / length);
             }
         }
@@ -228,7 +232,7 @@ namespace System.Numerics
         }
 
         /// <summary>
-        /// Returns the reflection of a vector off a suface that has the specified normal.
+        /// Returns the reflection of a vector off a surface that has the specified normal.
         /// </summary>
         /// <param name="vector">The source vector.</param>
         /// <param name="normal">The normal of the surface being reflected off.</param>
@@ -263,7 +267,7 @@ namespace System.Numerics
         public static Vector3 Clamp(Vector3 value1, Vector3 min, Vector3 max)
         {
             // This compare order is very important!!!
-            // We must follow HLSL behavior in the case user specfied min value is bigger than max value.
+            // We must follow HLSL behavior in the case user specified min value is bigger than max value.
 
             float x = value1.X;
             x = (x > max.X) ? max.X : x;
@@ -413,7 +417,7 @@ namespace System.Numerics
         /// <param name="right">The scalar value.</param>
         /// <returns>The scaled vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 Multiply(Vector3 left, Single right)
+        public static Vector3 Multiply(Vector3 left, float right)
         {
             return left * right;
         }
@@ -425,7 +429,7 @@ namespace System.Numerics
         /// <param name="right">The source vector.</param>
         /// <returns>The scaled vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 Multiply(Single left, Vector3 right)
+        public static Vector3 Multiply(float left, Vector3 right)
         {
             return left * right;
         }
@@ -449,7 +453,7 @@ namespace System.Numerics
         /// <param name="divisor">The scalar value.</param>
         /// <returns>The result of the division.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3 Divide(Vector3 left, Single divisor)
+        public static Vector3 Divide(Vector3 left, float divisor)
         {
             return left / divisor;
         }

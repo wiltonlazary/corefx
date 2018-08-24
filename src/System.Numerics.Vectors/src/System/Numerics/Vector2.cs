@@ -1,8 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Globalization;
+using System.Numerics.Hashing;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -40,7 +41,7 @@ namespace System.Numerics
         public override int GetHashCode()
         {
             int hash = this.X.GetHashCode();
-            hash = HashCodeHelper.CombineHashCodes(hash, this.Y.GetHashCode());
+            hash = HashHelpers.Combine(hash, this.Y.GetHashCode());
             return hash;
         }
 
@@ -86,12 +87,13 @@ namespace System.Numerics
         public string ToString(string format, IFormatProvider formatProvider)
         {
             StringBuilder sb = new StringBuilder();
-            string separator = NumberFormatInfo.GetInstance(formatProvider).NumberGroupSeparator + " ";
-            sb.Append("<");
+            string separator = NumberFormatInfo.GetInstance(formatProvider).NumberGroupSeparator;
+            sb.Append('<');
             sb.Append(this.X.ToString(format, formatProvider));
             sb.Append(separator);
+            sb.Append(' ');
             sb.Append(this.Y.ToString(format, formatProvider));
-            sb.Append(">");
+            sb.Append('>');
             return sb.ToString();
         }
 
@@ -105,12 +107,12 @@ namespace System.Numerics
             if (Vector.IsHardwareAccelerated)
             {
                 float ls = Vector2.Dot(this, this);
-                return (float)Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
             else
             {
                 float ls = X * X + Y * Y;
-                return (float)Math.Sqrt((double)ls);
+                return MathF.Sqrt(ls);
             }
         }
 
@@ -146,7 +148,7 @@ namespace System.Numerics
             {
                 Vector2 difference = value1 - value2;
                 float ls = Vector2.Dot(difference, difference);
-                return (float)System.Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
             else
             {
@@ -155,7 +157,7 @@ namespace System.Numerics
 
                 float ls = dx * dx + dy * dy;
 
-                return (float)Math.Sqrt((double)ls);
+                return MathF.Sqrt(ls);
             }
         }
 
@@ -198,7 +200,7 @@ namespace System.Numerics
             else
             {
                 float ls = value.X * value.X + value.Y * value.Y;
-                float invNorm = 1.0f / (float)Math.Sqrt((double)ls);
+                float invNorm = 1.0f / MathF.Sqrt(ls);
 
                 return new Vector2(
                     value.X * invNorm,
@@ -207,7 +209,7 @@ namespace System.Numerics
         }
 
         /// <summary>
-        /// Returns the reflection of a vector off a suface that has the specified normal.
+        /// Returns the reflection of a vector off a surface that has the specified normal.
         /// </summary>
         /// <param name="vector">The source vector.</param>
         /// <param name="normal">The normal of the surface being reflected off.</param>
@@ -240,7 +242,7 @@ namespace System.Numerics
         public static Vector2 Clamp(Vector2 value1, Vector2 min, Vector2 max)
         {
             // This compare order is very important!!!
-            // We must follow HLSL behavior in the case user specfied min value is bigger than max value.
+            // We must follow HLSL behavior in the case user specified min value is bigger than max value.
             float x = value1.X;
             x = (x > max.X) ? max.X : x;
             x = (x < min.X) ? min.X : x;
@@ -395,7 +397,7 @@ namespace System.Numerics
         /// <param name="right">The scalar value.</param>
         /// <returns>The scaled vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2 Multiply(Vector2 left, Single right)
+        public static Vector2 Multiply(Vector2 left, float right)
         {
             return left * right;
         }
@@ -407,7 +409,7 @@ namespace System.Numerics
         /// <param name="right">The source vector.</param>
         /// <returns>The scaled vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2 Multiply(Single left, Vector2 right)
+        public static Vector2 Multiply(float left, Vector2 right)
         {
             return left * right;
         }
@@ -431,7 +433,7 @@ namespace System.Numerics
         /// <param name="divisor">The scalar value.</param>
         /// <returns>The result of the division.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2 Divide(Vector2 left, Single divisor)
+        public static Vector2 Divide(Vector2 left, float divisor)
         {
             return left / divisor;
         }

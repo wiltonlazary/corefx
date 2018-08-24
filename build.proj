@@ -1,89 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  
-  <PropertyGroup>
-    <BuildToolsVersion>1.0.11-prerelease</BuildToolsVersion>
-  </PropertyGroup>
-  
-  <PropertyGroup>
-    <ProjectDir>$(MSBuildThisFileDirectory)</ProjectDir>
-    <SourceDir>$(ProjectDir)src\</SourceDir>
-    <BinDir>$(ProjectDir)bin\</BinDir>
-    <ToolsDir>$(BinDir)tools\</ToolsDir>
-    
-    <NuGetToolPath>$(ToolsDir)NuGet.exe</NuGetToolPath>
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="Directory.Build.props" />
 
-    <NuGetConfigFile>$(SourceDir)nuget\NuGet.Config</NuGetConfigFile>
-    <NuGetConfigCommandLine
-      Condition="Exists($(NuGetConfigFile))">-ConfigFile &quot;$(NuGetConfigFile)&quot;</NuGetConfigCommandLine>
-    <PackagesDir>$(SourceDir)packages\</PackagesDir>
+  <!-- required to build the projects in their specified order -->
+  <PropertyGroup>
+    <SerializeProjects>true</SerializeProjects>
   </PropertyGroup>
-  
+
+  <PropertyGroup>
+    <BuildPackages Condition="'$(BuildPackages)'==''">true</BuildPackages>
+  </PropertyGroup>
+
+  <Import Project="$(ToolsDir)VersionTools.targets" Condition="Exists('$(ToolsDir)VersionTools.targets')" />
+
   <ItemGroup>
-    <PackageConfigs Include="$(SourceDir)*\packages.config" />
+    <Project Include="external\dir.proj" />
+    <Project Include="src\dirs.proj" />
+    <Project Include="src\tests.builds" Condition="'$(BuildTests)'=='true'" />
+    <!-- signing must happen before packaging -->
+    <Project Include="src\sign.proj" />
+    <Project Include="src\packages.builds" Condition="'$(BuildPackages)'=='true'" />
   </ItemGroup>
-  
-  <UsingTask TaskName="DownloadFile" TaskFactory="CodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.v4.0.dll">
-    <ParameterGroup>
-      <Address ParameterType="System.String" Required="true"/>
-      <FileName ParameterType="System.String" Required="true" />
-    </ParameterGroup>
-    <Task>
-      <Reference Include="System" />
-      <Code Type="Fragment" Language="cs">
-        <![CDATA[
-           var directory = System.IO.Path.GetDirectoryName(FileName);
-           System.IO.Directory.CreateDirectory(directory);
-           var client = new System.Net.WebClient();
-           client.Proxy = System.Net.WebRequest.DefaultWebProxy;
-           client.Proxy.Credentials = System.Net.CredentialCache.DefaultCredentials;
-           client.DownloadFile(Address, FileName);
-        ]]>
-      </Code>
-    </Task>
-  </UsingTask>
-  
-  <Target Name="Clean">
-    <!-- Execute build tools -->
-    <MSBuild
-      Projects="$(ToolsDir)fxbuild.proj"
-      SkipNonexistentProjects="true"
-      Targets="Clean" />
-  </Target>
-  
-  <Target Name="Build" DependsOnTargets="_RestoreBuildTools">
-    <!-- Execute build tools -->
-    <MSBuild
-      Projects="$(ToolsDir)fxbuild.proj"
-      Targets="Build" />
-  </Target>
-  
-  <Target Name="BuildFxLocalDependency" DependsOnTargets="_RestoreBuildTools" Returns="$(ProducedPackages)">
-    <!-- Execute build tools -->
-    <MSBuild
-      Projects="$(ToolsDir)fxbuild.proj"
-      Targets="BuildFxLocalDependency">
-      <Output TaskParameter="TargetOutputs" ItemName="ProducedPackages" />
-    </MSBuild>
-  </Target>
-  
-  <Target
-    Name="_RestoreBuildTools"
-    Condition="!Exists('$(PackagesDir)Microsoft.DotNet.BuildTools.$(BuildToolsVersion)') Or !Exists('$(ToolsDir)fxbuild.proj')">
-    <!-- Download latest nuget.exe -->
-    <DownloadFile
-      Condition="!Exists($(NuGetToolPath))"
-      Address="http://nuget.org/nuget.exe"
-      FileName="$(NuGetToolPath)" />
 
-    <!-- Restore build tools -->
-    <Exec
-      StandardOutputImportance="Low"
-      Command="&quot;$(NuGetToolPath)&quot; install Microsoft.DotNet.BuildTools -Prerelease -Version $(BuildToolsVersion) -o &quot; $(PackagesDir) &quot; $(NuGetConfigCommandLine)" />
+  <Import Project="Directory.Build.targets" />
 
-    <!-- Copy build tools to tools directory -->
-    <Exec
-      Command="xcopy /e /y &quot;$(PackagesDir)Microsoft.DotNet.BuildTools.$(BuildToolsVersion)\lib\*&quot; &quot;$(ToolsDir)&quot; > $(ToolsDir)BuildTools.xcopy.log" />
+  <Import Project="dir.traversal.targets" />
+
+  <Import Project="$(ToolsDir)clean.targets" />
+
+  <PropertyGroup>
+    <PrebuildSetupTargets>
+      GenerateConfigurationProperties;
+      CreateOrUpdateCurrentVersionFile
+    </PrebuildSetupTargets>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TraversalBuildDependsOn>
+      $(PrebuildSetupTargets);
+      $(TraversalBuildDependsOn);
+    </TraversalBuildDependsOn>
+  </PropertyGroup>
+
+  <!-- Generate the configurations for this repo -->
+  <UsingTask TaskName="GenerateConfigurationProps" AssemblyFile="$(BuildToolsTaskDir)Microsoft.DotNet.Build.Tasks.dll"/>
+  <Target Name="GenerateConfigurationProperties">
+    <GenerateConfigurationProps Properties="@(Property)" PropertyValues="@(PropertyValue)" PropsFolder="$(BuildConfigurationFolder)" />
   </Target>
-  
+
+  <Target Name="Sync" DependsOnTargets="$(PrebuildSetupTargets)">
+    <ItemGroup>
+      <ExternalProject Include="external\dir.proj" />
+    </ItemGroup>
+
+    <MSBuild Projects="@(ExternalProject)"
+             ContinueOnError="ErrorAndContinue" />
+  </Target>
+
+  <UsingTask TaskName="UpdateVSConfigurations" AssemblyFile="$(BuildToolsTaskDir)Microsoft.DotNet.Build.Tasks.dll"/>
+  <Target Name="UpdateVSConfigurations">
+    <Message Importance="High" Text="Updating configurations for projects ..." />
+    <ItemGroup>
+      <_projectsToExcludeFromUpdate Include="$(MSBuildThisFileDirectory)src/SharedFrameworkValidation/**/*.csproj" />
+      <_projectsToUpdate Include="$(MSBuildThisFileDirectory)src/**/*.*csproj" Exclude="@(_projectsToExcludeFromUpdate)" />
+      <_projectsToUpdate Include="$(MSBuildThisFileDirectory)src/**/*.*ilproj" Exclude="@(_projectsToExcludeFromUpdate)" />
+      <_projectsToUpdate Include="$(MSBuildThisFileDirectory)src/**/*.*vbproj" Exclude="@(_projectsToExcludeFromUpdate)" />
+      <_solutionsToUpdateFiles Include="$(MSBuildThisFileDirectory)src/*/Directory.Build.props" />
+      <_solutionsToUpdate Include="@(_solutionsToUpdateFiles->'%(RootDir)%(Directory)')" Exclude="@(_solutionsToExcludeFromUpdate)" />
+    </ItemGroup>
+    <UpdateVSConfigurations ProjectsToUpdate="@(_projectsToUpdate)" SolutionsToUpdate="@(_solutionsToUpdate)" />
+    <Message Importance="High" Text="Updating configurations for projects ... Done." />
+  </Target>
+
+  <!-- Override CleanAllProjects from dir.traversal.targets and just remove the full BinDir -->
+  <Target Name="CleanAllProjects">
+    <RemoveDir Directories="$(BinDir)" />
+    <!-- Temporarily outside BinDir -->
+    <RemoveDir Directories="$(PackageInstallPath)" />
+  </Target>
+
+  <!-- Hook that can be used to insert custom build tasks to the build process such as setup and/or cleanup tasks -->
+  <Import Project="build.override.targets" Condition="Exists('build.override.targets')" />
+
 </Project>

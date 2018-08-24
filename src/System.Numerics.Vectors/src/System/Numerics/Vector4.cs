@@ -1,7 +1,9 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
+using System.Numerics.Hashing;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -47,9 +49,9 @@ namespace System.Numerics
         public override int GetHashCode()
         {
             int hash = this.X.GetHashCode();
-            hash = HashCodeHelper.CombineHashCodes(hash, this.Y.GetHashCode());
-            hash = HashCodeHelper.CombineHashCodes(hash, this.Z.GetHashCode());
-            hash = HashCodeHelper.CombineHashCodes(hash, this.W.GetHashCode());
+            hash = HashHelpers.Combine(hash, this.Y.GetHashCode());
+            hash = HashHelpers.Combine(hash, this.Z.GetHashCode());
+            hash = HashHelpers.Combine(hash, this.W.GetHashCode());
             return hash;
         }
 
@@ -95,16 +97,19 @@ namespace System.Numerics
         public string ToString(string format, IFormatProvider formatProvider)
         {
             StringBuilder sb = new StringBuilder();
-            string separator = NumberFormatInfo.GetInstance(formatProvider).NumberGroupSeparator + " ";
-            sb.Append("<");
+            string separator = NumberFormatInfo.GetInstance(formatProvider).NumberGroupSeparator;
+            sb.Append('<');
             sb.Append(this.X.ToString(format, formatProvider));
             sb.Append(separator);
+            sb.Append(' ');
             sb.Append(this.Y.ToString(format, formatProvider));
             sb.Append(separator);
+            sb.Append(' ');
             sb.Append(this.Z.ToString(format, formatProvider));
             sb.Append(separator);
+            sb.Append(' ');
             sb.Append(this.W.ToString(format, formatProvider));
-            sb.Append(">");
+            sb.Append('>');
             return sb.ToString();
         }
 
@@ -118,13 +123,13 @@ namespace System.Numerics
             if (Vector.IsHardwareAccelerated)
             {
                 float ls = Vector4.Dot(this, this);
-                return (float)System.Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
             else
             {
                 float ls = X * X + Y * Y + Z * Z + W * W;
 
-                return (float)Math.Sqrt((double)ls);
+                return MathF.Sqrt(ls);
             }
         }
 
@@ -160,7 +165,7 @@ namespace System.Numerics
             {
                 Vector4 difference = value1 - value2;
                 float ls = Vector4.Dot(difference, difference);
-                return (float)System.Math.Sqrt(ls);
+                return MathF.Sqrt(ls);
             }
             else
             {
@@ -171,7 +176,7 @@ namespace System.Numerics
 
                 float ls = dx * dx + dy * dy + dz * dz + dw * dw;
 
-                return (float)Math.Sqrt((double)ls);
+                return MathF.Sqrt(ls);
             }
         }
 
@@ -216,7 +221,7 @@ namespace System.Numerics
             else
             {
                 float ls = vector.X * vector.X + vector.Y * vector.Y + vector.Z * vector.Z + vector.W * vector.W;
-                float invNorm = 1.0f / (float)Math.Sqrt((double)ls);
+                float invNorm = 1.0f / MathF.Sqrt(ls);
 
                 return new Vector4(
                     vector.X * invNorm,
@@ -237,7 +242,7 @@ namespace System.Numerics
         public static Vector4 Clamp(Vector4 value1, Vector4 min, Vector4 max)
         {
             // This compare order is very important!!!
-            // We must follow HLSL behavior in the case user specfied min value is bigger than max value.
+            // We must follow HLSL behavior in the case user specified min value is bigger than max value.
 
             float x = value1.X;
             x = (x > max.X) ? max.X : x;
@@ -461,7 +466,7 @@ namespace System.Numerics
         /// <param name="right">The scalar value.</param>
         /// <returns>The scaled vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector4 Multiply(Vector4 left, Single right)
+        public static Vector4 Multiply(Vector4 left, float right)
         {
             return left * new Vector4(right, right, right, right);
         }
@@ -473,7 +478,7 @@ namespace System.Numerics
         /// <param name="right">The source vector.</param>
         /// <returns>The scaled vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector4 Multiply(Single left, Vector4 right)
+        public static Vector4 Multiply(float left, Vector4 right)
         {
             return new Vector4(left, left, left, left) * right;
         }
@@ -497,7 +502,7 @@ namespace System.Numerics
         /// <param name="divisor">The scalar value.</param>
         /// <returns>The result of the division.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector4 Divide(Vector4 left, Single divisor)
+        public static Vector4 Divide(Vector4 left, float divisor)
         {
             return left / divisor;
         }

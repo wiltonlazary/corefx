@@ -1,12 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-namespace System.Collections.Immutable.Test
+namespace System.Collections.Immutable.Tests
 {
     /// <summary>
     /// Produces the same hash for every value.
@@ -14,16 +12,16 @@ namespace System.Collections.Immutable.Test
     /// <typeparam name="T">The type to hash</typeparam>
     internal class BadHasher<T> : IEqualityComparer<T>
     {
-        private readonly IEqualityComparer<T> equalityComparer;
+        private readonly IEqualityComparer<T> _equalityComparer;
 
         internal BadHasher(IEqualityComparer<T> equalityComparer = null)
         {
-            this.equalityComparer = equalityComparer ?? EqualityComparer<T>.Default;
+            _equalityComparer = equalityComparer ?? EqualityComparer<T>.Default;
         }
 
         public bool Equals(T x, T y)
         {
-            return this.equalityComparer.Equals(x, y);
+            return _equalityComparer.Equals(x, y);
         }
 
         public int GetHashCode(T obj)

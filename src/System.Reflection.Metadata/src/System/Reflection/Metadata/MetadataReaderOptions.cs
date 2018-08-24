@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Reflection.Metadata
 {
@@ -13,7 +14,7 @@ namespace System.Reflection.Metadata
 
         /// <summary>
         /// The options that are used when a <see cref="MetadataReader"/> is obtained
-        /// via an overload that does not tak a <see cref="MetadataReaderOptions"/>
+        /// via an overload that does not take a <see cref="MetadataReaderOptions"/>
         /// argument.
         /// </summary>
         Default = ApplyWindowsRuntimeProjections,

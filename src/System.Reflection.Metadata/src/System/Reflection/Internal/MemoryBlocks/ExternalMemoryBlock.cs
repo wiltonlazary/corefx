@@ -1,10 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-using System;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.Reflection.Internal
 {
@@ -14,40 +10,25 @@ namespace System.Reflection.Internal
     internal unsafe sealed class ExternalMemoryBlock : AbstractMemoryBlock
     {
         // keeps the owner of the memory alive as long as the block is alive:
-        private readonly object memoryOwner;
+        private readonly object _memoryOwner;
 
-        private byte* buffer;
-        private int size;
+        private byte* _buffer;
+        private int _size;
 
         public ExternalMemoryBlock(object memoryOwner, byte* buffer, int size)
         {
-            this.memoryOwner = memoryOwner;
-            this.buffer = buffer;
-            this.size = size;
+            _memoryOwner = memoryOwner;
+            _buffer = buffer;
+            _size = size;
         }
 
-        protected override void Dispose(bool disposing)
+        public override void Dispose()
         {
-            Debug.Assert(disposing);
-            this.buffer = null;
-            this.size = 0;
+            _buffer = null;
+            _size = 0;
         }
 
-        public override byte* Pointer
-        {
-            get { return this.buffer; }
-        }
-
-        public override int Size
-        {
-            get { return this.size; }
-        }
-
-        public override ImmutableArray<byte> GetContent(int offset)
-        {
-            var result = CreateImmutableArray((this.buffer + offset), this.size - offset);
-            GC.KeepAlive(memoryOwner);
-            return result;
-        }
+        public override byte* Pointer => _buffer;
+        public override int Size => _size;
     }
 }

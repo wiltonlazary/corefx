@@ -1,9 +1,8 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 
@@ -21,18 +20,18 @@ namespace System.Collections.Immutable
     public interface IImmutableList<T> : IReadOnlyList<T>
     {
         /// <summary>
-        /// Gets an empty list that retains the same sort or unordered semantics that this instance has.
+        /// Gets an empty list that retains the same sort semantics that this instance has.
         /// </summary>
         [Pure]
         IImmutableList<T> Clear();
 
         /// <summary>
         /// Searches for the specified object and returns the zero-based index of the
-        /// first occurrence within the range of elements in the ImmutableList&lt;T&gt;
+        /// first occurrence within the range of elements in the <see cref="ImmutableList{T}"/>
         /// that starts at the specified index and contains the specified number of elements.
         /// </summary>
         /// <param name="item">
-        /// The object to locate in the ImmutableList&lt;T&gt;. The value
+        /// The object to locate in the <see cref="ImmutableList{T}"/>. The value
         /// can be null for reference types.
         /// </param>
         /// <param name="index">
@@ -44,34 +43,36 @@ namespace System.Collections.Immutable
         /// </param>
         /// <param name="equalityComparer">
         /// The equality comparer to use in the search.
+        /// If <c>null</c>, <see cref="EqualityComparer{T}.Default"/> is used.
         /// </param>
         /// <returns>
         /// The zero-based index of the first occurrence of item within the range of
-        /// elements in the ImmutableList&lt;T&gt; that starts at index and
-        /// contains count number of elements, if found; otherwise, –1.
+        /// elements in the <see cref="ImmutableList{T}"/> that starts at index and
+        /// contains count number of elements, if found; otherwise, -1.
         /// </returns>
         [Pure]
         int IndexOf(T item, int index, int count, IEqualityComparer<T> equalityComparer);
 
         /// <summary>
         /// Searches for the specified object and returns the zero-based index of the
-        /// last occurrence within the range of elements in the ImmutableList&lt;T&gt;
+        /// last occurrence within the range of elements in the <see cref="ImmutableList{T}"/>
         /// that contains the specified number of elements and ends at the specified
         /// index.
         /// </summary>
         /// <param name="item">
-        /// The object to locate in the ImmutableList&lt;T&gt;. The value
+        /// The object to locate in the <see cref="ImmutableList{T}"/>. The value
         /// can be null for reference types.
         /// </param>
         /// <param name="index">The starting position of the search. The search proceeds from <paramref name="index"/> toward the beginning of this instance.</param>
         /// <param name="count">The number of elements in the section to search.</param>
         /// <param name="equalityComparer">
         /// The equality comparer to use in the search.
+        /// If <c>null</c>, <see cref="EqualityComparer{T}.Default"/> is used.
         /// </param>
         /// <returns>
-        /// The zero-based index of the last occurrence of item within the range of elements
-        /// in the ImmutableList&lt;T&gt; that contains count number of elements
-        /// and ends at index, if found; otherwise, –1.
+        /// The zero-based index of the last occurrence of <paramref name="item"/> within the range of elements
+        /// in the <see cref="ImmutableList{T}"/> that contains <paramref name="count"/> number of elements
+        /// and ends at <paramref name="index"/>, if found; otherwise, -1.
         /// </returns>
         [Pure]
         int LastIndexOf(T item, int index, int count, IEqualityComparer<T> equalityComparer);
@@ -80,7 +81,7 @@ namespace System.Collections.Immutable
         /// Adds the specified value to this list.
         /// </summary>
         /// <param name="value">The value to add.</param>
-        /// <returns>A new list with the element added, or this list if the element is already in this list.</returns>
+        /// <returns>A new list with the element added.</returns>
         [Pure]
         IImmutableList<T> Add(T value);
 
@@ -116,6 +117,7 @@ namespace System.Collections.Immutable
         /// <param name="value">The value to remove.</param>
         /// <param name="equalityComparer">
         /// The equality comparer to use in the search.
+        /// If <c>null</c>, <see cref="EqualityComparer{T}.Default"/> is used.
         /// </param>
         /// <returns>A new list with the element removed, or this list if the element is not in this list.</returns>
         [Pure]
@@ -126,7 +128,7 @@ namespace System.Collections.Immutable
         /// predicate.
         /// </summary>
         /// <param name="match">
-        /// The System.Predicate&lt;T&gt; delegate that defines the conditions of the elements
+        /// The <see cref="Predicate{T}"/> delegate that defines the conditions of the elements
         /// to remove.
         /// </param>
         /// <returns>
@@ -141,6 +143,7 @@ namespace System.Collections.Immutable
         /// <param name="items">The items to remove if matches are found in this list.</param>
         /// <param name="equalityComparer">
         /// The equality comparer to use in the search.
+        /// If <c>null</c>, <see cref="EqualityComparer{T}.Default"/> is used.
         /// </param>
         /// <returns>
         /// A new list with the elements removed.
@@ -183,6 +186,7 @@ namespace System.Collections.Immutable
         /// <param name="newValue">The element to replace the old element with.</param>
         /// <param name="equalityComparer">
         /// The equality comparer to use in the search.
+        /// If <c>null</c>, <see cref="EqualityComparer{T}.Default"/> is used.
         /// </param>
         /// <returns>The new list -- even if the value being replaced is equal to the new value for that position.</returns>
         /// <exception cref="ArgumentException">Thrown when the old value does not exist in the list.</exception>

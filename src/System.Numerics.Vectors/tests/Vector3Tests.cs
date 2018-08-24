@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -12,8 +13,8 @@ namespace System.Numerics.Tests
         [Fact]
         public void Vector3MarshalSizeTest()
         {
-            Assert.Equal(12, Marshal.SizeOf(typeof(Vector3)));
-            Assert.Equal(12, Marshal.SizeOf(new Vector3()));
+            Assert.Equal(12, Marshal.SizeOf<Vector3>());
+            Assert.Equal(12, Marshal.SizeOf<Vector3>(new Vector3()));
         }
 
         [Fact]
@@ -21,8 +22,14 @@ namespace System.Numerics.Tests
         {
             Vector3 v1 = new Vector3(2.0f, 3.0f, 3.3f);
 
-            Single[] a = new Single[4];
-            Single[] b = new Single[3];
+            float[] a = new float[4];
+            float[] b = new float[3];
+
+            Assert.Throws<NullReferenceException>(() => v1.CopyTo(null, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => v1.CopyTo(a, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => v1.CopyTo(a, a.Length));
+            AssertExtensions.Throws<ArgumentException>(null, () => v1.CopyTo(a, a.Length - 2));
+
             v1.CopyTo(a, 1);
             v1.CopyTo(b);
             Assert.Equal(0.0f, a[0]);
@@ -38,25 +45,25 @@ namespace System.Numerics.Tests
         public void Vector3GetHashCodeTest()
         {
             Vector3 v1 = new Vector3(2.0f, 3.0f, 3.3f);
-            Vector3 v2 = new Vector3(4.5f, 6.5f, 7.5f);
+            Vector3 v2 = new Vector3(2.0f, 3.0f, 3.3f);
             Vector3 v3 = new Vector3(2.0f, 3.0f, 3.3f);
             Vector3 v5 = new Vector3(3.0f, 2.0f, 3.3f);
-            Assert.True(v1.GetHashCode() == v1.GetHashCode());
-            Assert.False(v1.GetHashCode() == v5.GetHashCode());
-            Assert.True(v1.GetHashCode() == v3.GetHashCode());
+            Assert.Equal(v1.GetHashCode(), v1.GetHashCode());
+            Assert.Equal(v1.GetHashCode(), v2.GetHashCode());
+            Assert.NotEqual(v1.GetHashCode(), v5.GetHashCode());
+            Assert.Equal(v1.GetHashCode(), v3.GetHashCode());
             Vector3 v4 = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 v6 = new Vector3(1.0f, 0.0f, 0.0f);
             Vector3 v7 = new Vector3(0.0f, 1.0f, 0.0f);
             Vector3 v8 = new Vector3(1.0f, 1.0f, 1.0f);
             Vector3 v9 = new Vector3(1.0f, 1.0f, 0.0f);
-            Assert.False(v4.GetHashCode() == v6.GetHashCode());
-            Assert.False(v4.GetHashCode() == v7.GetHashCode());
-            Assert.False(v4.GetHashCode() == v8.GetHashCode());
-            Assert.False(v7.GetHashCode() == v6.GetHashCode());
-            Assert.False(v8.GetHashCode() == v6.GetHashCode());
-            Assert.True(v8.GetHashCode() == v7.GetHashCode());
-            Assert.False(v8.GetHashCode() == v9.GetHashCode());
-            Assert.False(v7.GetHashCode() == v9.GetHashCode());
+            Assert.NotEqual(v4.GetHashCode(), v6.GetHashCode());
+            Assert.NotEqual(v4.GetHashCode(), v7.GetHashCode());
+            Assert.NotEqual(v4.GetHashCode(), v8.GetHashCode());
+            Assert.NotEqual(v7.GetHashCode(), v6.GetHashCode());
+            Assert.NotEqual(v8.GetHashCode(), v6.GetHashCode());
+            Assert.NotEqual(v8.GetHashCode(), v9.GetHashCode());
+            Assert.NotEqual(v7.GetHashCode(), v9.GetHashCode());
         }
 
         [Fact]
@@ -467,19 +474,19 @@ namespace System.Numerics.Tests
             Vector3 max = new Vector3(1.0f, 1.1f, 1.13f);
 
             // Normal case.
-            // Case N1: specfied value is in the range.
+            // Case N1: specified value is in the range.
             Vector3 expected = new Vector3(0.5f, 0.3f, 0.33f);
             Vector3 actual = Vector3.Clamp(a, min, max);
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.Clamp did not return the expected value.");
 
             // Normal case.
-            // Case N2: specfied value is bigger than max value.
+            // Case N2: specified value is bigger than max value.
             a = new Vector3(2.0f, 3.0f, 4.0f);
             expected = max;
             actual = Vector3.Clamp(a, min, max);
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.Clamp did not return the expected value.");
 
-            // Case N3: specfied value is smaller than max value.
+            // Case N3: specified value is smaller than max value.
             a = new Vector3(-2.0f, -3.0f, -4.0f);
             expected = min;
             actual = Vector3.Clamp(a, min, max);
@@ -491,24 +498,24 @@ namespace System.Numerics.Tests
             actual = Vector3.Clamp(a, min, max);
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.Clamp did not return the expected value.");
 
-            // User specfied min value is bigger than max value.
+            // User specified min value is bigger than max value.
             max = new Vector3(0.0f, 0.1f, 0.13f);
             min = new Vector3(1.0f, 1.1f, 1.13f);
 
-            // Case W1: specfied value is in the range.
+            // Case W1: specified value is in the range.
             a = new Vector3(0.5f, 0.3f, 0.33f);
             expected = min;
             actual = Vector3.Clamp(a, min, max);
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.Clamp did not return the expected value.");
 
             // Normal case.
-            // Case W2: specfied value is bigger than max and min value.
+            // Case W2: specified value is bigger than max and min value.
             a = new Vector3(2.0f, 3.0f, 4.0f);
             expected = min;
             actual = Vector3.Clamp(a, min, max);
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.Clamp did not return the expected value.");
 
-            // Case W3: specfied value is smaller than min and max value.
+            // Case W3: specified value is smaller than min and max value.
             a = new Vector3(-2.0f, -3.0f, -4.0f);
             expected = min;
             actual = Vector3.Clamp(a, min, max);
@@ -635,11 +642,11 @@ namespace System.Numerics.Tests
         [Fact]
         public void Vector3UnaryNegationTest1()
         {
-            Vector3 a = -new Vector3(Single.NaN, Single.PositiveInfinity, Single.NegativeInfinity);
+            Vector3 a = -new Vector3(float.NaN, float.PositiveInfinity, float.NegativeInfinity);
             Vector3 b = -new Vector3(0.0f, 0.0f, 0.0f);
-            Assert.Equal(Single.NaN, a.X);
-            Assert.Equal(Single.NegativeInfinity, a.Y);
-            Assert.Equal(Single.PositiveInfinity, a.Z);
+            Assert.Equal(float.NaN, a.X);
+            Assert.Equal(float.NegativeInfinity, a.Y);
+            Assert.Equal(float.PositiveInfinity, a.Z);
             Assert.Equal(0.0f, b.X);
             Assert.Equal(0.0f, b.Y);
             Assert.Equal(0.0f, b.Z);
@@ -663,7 +670,7 @@ namespace System.Numerics.Tests
 
         // A test for operator * (Vector3f, float)
         [Fact]
-        public void Vector3MultiplyTest()
+        public void Vector3MultiplyOperatorTest()
         {
             Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
 
@@ -677,9 +684,25 @@ namespace System.Numerics.Tests
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.operator * did not return the expected value.");
         }
 
+        // A test for operator * (float, Vector3f)
+        [Fact]
+        public void Vector3MultiplyOperatorTest2()
+        {
+            Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
+
+            const float factor = 2.0f;
+
+            Vector3 expected = new Vector3(2.0f, 4.0f, 6.0f);
+            Vector3 actual;
+
+            actual = factor * a;
+
+            Assert.True(MathHelper.Equal(expected, actual), "Vector3f.operator * did not return the expected value.");
+        }
+
         // A test for operator * (Vector3f, Vector3f)
         [Fact]
-        public void Vector3MultiplyTest1()
+        public void Vector3MultiplyOperatorTest3()
         {
             Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
 
@@ -739,7 +762,6 @@ namespace System.Numerics.Tests
             Assert.True(float.IsNegativeInfinity(actual.X), "Vector3f.operator / did not return the expected value.");
             Assert.True(float.IsPositiveInfinity(actual.Y), "Vector3f.operator / did not return the expected value.");
             Assert.True(float.IsPositiveInfinity(actual.Z), "Vector3f.operator / did not return the expected value.");
-
         }
 
         // A test for operator / (Vector3f, Vector3f)
@@ -896,12 +918,23 @@ namespace System.Numerics.Tests
 
         // A test for Multiply (Vector3f, float)
         [Fact]
-        public void Vector3MultiplyTest2()
+        public void Vector3MultiplyTest()
         {
             Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
-            float factor = 2.0f;
+            const float factor = 2.0f;
             Vector3 expected = new Vector3(2.0f, 4.0f, 6.0f);
             Vector3 actual = Vector3.Multiply(a, factor);
+            Assert.Equal(expected, actual);
+        }
+
+        // A test for Multiply (float, Vector3f)
+        [Fact]
+        public static void Vector3MultiplyTest2()
+        {
+            Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
+            const float factor = 2.0f;
+            Vector3 expected = new Vector3(2.0f, 4.0f, 6.0f);
+            Vector3 actual = Vector3.Multiply(factor, a);
             Assert.Equal(expected, actual);
         }
 
@@ -1089,14 +1122,14 @@ namespace System.Numerics.Tests
         public void Vector3AbsTest()
         {
             Vector3 v1 = new Vector3(-2.5f, 2.0f, 0.5f);
-            Vector3 v3 = Vector3.Abs(new Vector3(0.0f, Single.NegativeInfinity, Single.NaN));
+            Vector3 v3 = Vector3.Abs(new Vector3(0.0f, float.NegativeInfinity, float.NaN));
             Vector3 v = Vector3.Abs(v1);
             Assert.Equal(2.5f, v.X);
             Assert.Equal(2.0f, v.Y);
             Assert.Equal(0.5f, v.Z);
             Assert.Equal(0.0f, v3.X);
-            Assert.Equal(Single.PositiveInfinity, v3.Y);
-            Assert.Equal(Single.NaN, v3.Z);
+            Assert.Equal(float.PositiveInfinity, v3.Y);
+            Assert.Equal(float.NaN, v3.Z);
         }
 
         [Fact]
@@ -1107,7 +1140,7 @@ namespace System.Numerics.Tests
             Assert.Equal(2, (int)Vector3.SquareRoot(b).X);
             Assert.Equal(2, (int)Vector3.SquareRoot(b).Y);
             Assert.Equal(4, (int)Vector3.SquareRoot(b).Z);
-            Assert.Equal(Single.NaN, Vector3.SquareRoot(a).X);
+            Assert.Equal(float.NaN, Vector3.SquareRoot(a).X);
         }
 
         // A test to make sure these types are blittable directly into GPU buffer memory layouts
@@ -1123,22 +1156,22 @@ namespace System.Numerics.Tests
         [StructLayout(LayoutKind.Sequential)]
         struct Vector3_2x
         {
-            Vector3 a;
-            Vector3 b;
+            private Vector3 _a;
+            private Vector3 _b;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         struct Vector3PlusFloat
         {
-            Vector3 v;
-            float f;
+            private Vector3 _v;
+            private float _f;
         }
 
         [StructLayout(LayoutKind.Sequential)]
         struct Vector3PlusFloat_2x
         {
-            Vector3PlusFloat a;
-            Vector3PlusFloat b;
+            private Vector3PlusFloat _a;
+            private Vector3PlusFloat _b;
         }
 
         [Fact]
